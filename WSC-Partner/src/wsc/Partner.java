@@ -1,6 +1,10 @@
 package wsc;
 
-import com.sforce.soap.partner.Connector;
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStreamReader;
+
 import com.sforce.soap.partner.DescribeGlobalResult;
 import com.sforce.soap.partner.DescribeGlobalSObjectResult;
 import com.sforce.soap.partner.DescribeSObjectResult;
@@ -11,43 +15,64 @@ import com.sforce.soap.partner.FieldType;
 import com.sforce.ws.ConnectionException;
 import com.sforce.ws.ConnectorConfig;
 
-public class Main {
+public class Partner {
+	
+	private static PartnerConnection partnerConnection = null;
+    private static BufferedReader reader = 
+    	new BufferedReader(new InputStreamReader(System.in));
+    
+    public static void main(String[] args) {
+        Partner partner = new Partner();
+        if (partner.login()) {
+            partner.describeGlobal();
+            partner.describeSObjectsSample();
+        }
+    } 
+    
+    private String getUserInput(String prompt) {
+        String result = "";
+        try {
+          System.out.print(prompt);
+          result = reader.readLine();
+        } catch (IOException ioe) {
+          ioe.printStackTrace();
+        }
+        return result;
+    }
+    
+    private boolean login() {
+        boolean success = false;
+        String username = getUserInput("Enter username: ");
+        String password = getUserInput("Enter password: ");
+        String authEndPoint = getUserInput("Enter auth end point: ");
 
-	static final String USERNAME = "bpatterson@cebglobal.com.cldshps";
-	static final String PASSWORD = "password+token";
-	static PartnerConnection connection;
+        try {
+          ConnectorConfig config = new ConnectorConfig();
+          config.setUsername(username);
+          config.setPassword(password);
+          
+          config.setAuthEndpoint(authEndPoint);
+          config.setTraceFile("traceLogs.txt");
+          config.setTraceMessage(true);
+          config.setPrettyPrintXml(true);
 
-	public static void main(String[] args) {
+          partnerConnection = new PartnerConnection(config);          
 
-		ConnectorConfig config = new ConnectorConfig();
-		config.setUsername(USERNAME);
-		config.setPassword(PASSWORD);
-		//config.setTraceMessage(true);
+          success = true;
+        } catch (ConnectionException ce) {
+          ce.printStackTrace();
+        } catch (FileNotFoundException fnfe) {
+          fnfe.printStackTrace();
+        }
 
-		try {
+        return success;
+      }
 
-			connection = Connector.newConnection(config);
-
-			// display some current settings
-			System.out.println("Auth EndPoint: "+config.getAuthEndpoint());
-			System.out.println("Service EndPoint: "+config.getServiceEndpoint());
-			System.out.println("Username: "+config.getUsername());
-			System.out.println("SessionId: "+config.getSessionId());
-
-			describeGlobal();
-			describeSObjectsSample();
-
-		} catch (ConnectionException e1) {
-			e1.printStackTrace();
-		}  
-
-	}
-
-	public static void describeGlobal() {
+	public void describeGlobal() {
 		try {
 			// Make the describeGlobal() call
 			DescribeGlobalResult describeGlobalResult = 
-					connection.describeGlobal();
+					partnerConnection.describeGlobal();
 
 			// Get the sObjects from the describe global result
 			DescribeGlobalSObjectResult[] sobjectResults = 
@@ -62,12 +87,12 @@ public class Main {
 		}
 	}
 
-	public static void describeSObjectsSample() {
+	public void describeSObjectsSample() {
 		try {
 			// Call describeSObjectResults and pass it an array with
 			// the names of the objects to describe.
 			DescribeSObjectResult[] describeSObjectResults = 
-					connection.describeSObjects(
+					partnerConnection.describeSObjects(
 							new String[] {"account"});
 
 			// Iterate through the list of describe sObject results
@@ -133,7 +158,5 @@ public class Main {
 			ce.printStackTrace();  
 		}
 	}
-
-
 
 }
